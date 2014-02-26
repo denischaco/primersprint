@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html> 
+    <head>
+    <title>Primer Sprint</title>
+    <meta charset="utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+
+        <script>
+            $(document).bind("mobileinit", function() {
+                $.mobile.defaultPageTransition = 'none';
+                $.mobile.defaultDialogTransition = 'none';
+                $.mobile.useFastClick = true;
+            });
+        </script>
+        
+        <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+        
+        <script src="http://maps.googleapis.com/maps/api/js?sensor=false&language=en"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
+        <script src="js/event.js"></script>
+        <script src="js/ui-map.js"></script>
+        <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+        <style type="text/css">
+            .map {
+                height: 200px;
+                width: 100%;
+            }
+            .consola
+            {
+                background-color:black;
+                margin: 10px 5px 10px 5px;
+                font-family: Consolas, Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+                color:white;  
+            }
+        </style>
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-1734981-6']);
+        _gaq.push(['_trackPageview']);
+
+        (function() {
+          var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+          ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+          var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+
+    </script>
+    
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+    </head> 
+    <body  ng-app="geo"> 
+        <div class="container main" ng-controller="mainController" style="margin:0px;padding:0px;width:100%;">
+            <form name="guardar_punto" id="guardar_punto" method="POST" action="guardarpunto.php" style="text-align: center;">
+                <div class="row">
+                    <div id="map_canvas" ui-map="model.myMap" class="map" ui-options="mapOptions">
+                    </div>
+                    <div ng-repeat="marker in myMarkers" ui-map-marker="myMarkers[$index]">
+                    </div>
+                </div>
+
+
+                <!-- GESTION DE CATEGORIAS INICIO -->
+                <div ng-controller="GestionCategorias">
+                    <div>
+                        Filtro:
+                        <input type="text" ng-model="filtro_categoria" \>
+                    </div>
+                    </br>
+
+                    <div>
+                        <div ng-repeat="categoria in categorias | filter:filtro_categoria" style="background-color: {{ categoria.color }};">
+                            <input type="checkbox" name="categoria[{{categoria.id}}]" value="{{categoria.nombre}}" ng-model="categoria.seleccionada" ng-checked="categoria.seleccionada">
+                            {{categoria.nombre}}
+                        </div>
+
+                        <input type="submit" value="ENVIAR (Not Yet Madafaca!)"\>   
+                
+                        <div class="consola">
+                            <p>CONSOLA</p>
+                            Categorias seleccionadas -->{{selection|json}}
+                        </div> 
+                        
+                    </div>
+                </div>
+                <!-- GESTION DE CATEGORIAS FIN --> 
+
+                <!-- CONSOLA INICIO -->
+                <div class="consola" ng-show="showResult()" >
+                    <p>CONSOLA</p>
+                    Latitud: {{lat}} <br />
+                   <input type="hidden" name="latitud" value="{{ lat }}" \>
+                   Longitud: {{lng}} <br />
+                   <input type="hidden" name="longitud" value="{{ lng }}" \>
+                   Precisión: {{accuracy}}
+                   
+                    <div ng-show="!showResult()" >
+                        Error : {{error}}
+                        Código: {{error.code}}
+                    </div>
+                    <div ng-controller="GestionCategorias">
+    
+                    </div> 
+                </div>
+                <!-- CONSOLA FIN -->
+            </form>
+        </div>
+ 
+
+
+</body>
+<script type="text/javascript">
+
+    // GEOLOCALIZAR INICIO
+
+    var app = angular.module("geo", ["ui.map", "ui.event"])
+    .controller("mainController", function ($scope) {
+        $scope.lat = "0";
+        $scope.lng = "0";
+        $scope.accuracy = "0";
+        $scope.error = "";
+        $scope.model = { myMap: undefined };
+        $scope.myMarkers = [];
+
+        $scope.showResult = function () {
+            return $scope.error == "";
+        }
+
+        $scope.mapOptions = {
+            center: new google.maps.LatLng($scope.lat, $scope.lng),
+            zoom: 15,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+
+        $scope.showPosition = function (position) {
+            $scope.lat = position.coords.latitude;
+            $scope.lng = position.coords.longitude;
+            $scope.accuracy = position.coords.accuracy;
+            $scope.$apply();
+
+            var latlng = new google.maps.LatLng($scope.lat, $scope.lng);
+            $scope.model.myMap.setCenter(latlng);
+            $scope.myMarkers.push(new google.maps.Marker({ map: $scope.model.myMap, position: latlng }));
+        }
+
+        $scope.showError = function (error) {
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    $scope.error = "No estás compartiendo tu ubicación con nosotros."
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    $scope.error = "No está disponible esa información."
+                    break;
+                case error.TIMEOUT:
+                    $scope.error = "Se venció el tiempo de espera."
+                    break;
+                case error.UNKNOWN_ERROR:
+                    $scope.error = "Error Desconocido."
+                    break;
+            }
+            $scope.$apply();
+        }
+
+        $scope.getLocation = function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition($scope.showPosition, $scope.showError);
+            }
+            else {
+                $scope.error = "Tu navegador no soporta geolocalización.";
+            }
+        }
+
+        $scope.getLocation();
+    });
+    // GEOLOCALIZAR FIN
+
+    // CATEGORIAS INICIO
+    function GestionCategorias($scope)
+    {
+        $scope.categorias = [
+        {id:'1',nombre:'Tráfico',seleccionada:true,color:"rgb(163, 163, 224)"},
+        {id:'2',nombre:'Gastronomía',seleccionada:false,color:"rgb(151, 245, 33)"},
+        {id:'3',nombre:'Noche',seleccionada:false,color:"rgb(243, 243, 66)"},
+        {id:'4',nombre:'Social',seleccionada:false,color:"rgb(165, 255, 255)"},
+        ];
+        // ARREGLO DE SELECCIONES DE CATEGORIAS
+        $scope.selection = [];
+
+        // helper method
+        $scope.categoriasSeleccionadas = function categoriasSeleccionadas() {
+        return filterFilter($scope.categorias, { seleccionada: true });
+        };
+
+        // watch fruits for changes
+        $scope.$watch('categorias|filter:{seleccionada:true}', function (nv) {
+        $scope.selection = nv.map(function (categoria) {
+          return categoria.id;
+        });
+        }, true); 
+    }
+
+   
+    // CATEGORIAS FIN
+
+    // CONTROLAR SUBMIT FORM INICIO
+    // Llamada ajax al servidor, despues redireccion a pagina con mensaje
+
+    // CONTROLAR SUBMIT FORM FIN
+</script>
+</html>
